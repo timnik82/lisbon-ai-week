@@ -8,14 +8,22 @@
  *     next load, and the cached shell is only used when the network fails.
  *   - Vite's content-hashed build output under /assets/ is CACHE-FIRST. Those
  *     URLs change whenever their contents change, so they can never go stale.
- *   - Everything else same-origin is served from cache and refreshed in the
- *     background, so updates land on the following load.
+ *   - A small, explicit allowlist of static files is served from cache and
+ *     refreshed in the background. Everything else same-origin is passed
+ *     straight through, so a future API route cannot be silently cached and
+ *     served stale out of a version-pinned cache.
  *   - Cross-origin requests are not touched at all. Google Fonts is therefore
  *     not cached: offline, the app falls back to the system font rather than
  *     filling the cache with opaque responses.
  *
  * The event catalogue is bundled into the JS at build time, so caching the
- * hashed assets is enough to make the whole schedule work offline.
+ * hashed /assets/ output is enough to make the whole schedule work offline.
+ *
+ * The hashed filenames are only known after a build, so they cannot be listed
+ * here. On the very first visit the worker is not yet controlling the page and
+ * therefore never sees those requests; the page hands us the list it actually
+ * loaded via a 'warm-assets' message so that the first offline launch works
+ * too. See index.tsx.
  *
  * Bump VERSION to invalidate every cache on the next deploy.
  */
@@ -24,12 +32,23 @@ const SHELL_CACHE = VERSION + '-shell'
 const ASSET_CACHE = VERSION + '-assets'
 const KEEP = [SHELL_CACHE, ASSET_CACHE]
 
-const PRECACHE = [
-  '/',
+// Without these the app cannot boot offline, so a failure here should fail the
+// install and leave the previous worker in place.
+const CORE_PRECACHE = ['/', '/manifest.webmanifest']
+
+// Nice to have offline, but never worth losing the whole worker over: addAll is
+// all-or-nothing, so a single renamed icon would otherwise reject the install
+// and silently disable offline support entirely.
+const OPTIONAL_PRECACHE = ['/apple-touch-icon.png', '/icon-192.png', '/icon-512.png', '/logo-aiw.png']
+
+// The only same-origin paths the background-refresh branch may touch.
+const STATIC_PATHS = [
   '/manifest.webmanifest',
   '/apple-touch-icon.png',
   '/icon-192.png',
   '/icon-512.png',
+  '/icon-maskable-512.png',
+  '/favicon.ico',
   '/logo-aiw.png',
 ]
 
@@ -37,7 +56,12 @@ self.addEventListener('install', (event) => {
   event.waitUntil(
     caches
       .open(SHELL_CACHE)
-      .then((cache) => cache.addAll(PRECACHE))
+      .then((cache) =>
+        Promise.all([
+          cache.addAll(CORE_PRECACHE),
+          ...OPTIONAL_PRECACHE.map((url) => cache.add(url).catch(() => undefined)),
+        ]),
+      )
       .then(() => self.skipWaiting()),
   )
 })
@@ -48,6 +72,37 @@ self.addEventListener('activate', (event) => {
       .keys()
       .then((keys) => Promise.all(keys.filter((key) => !KEEP.includes(key)).map((key) => caches.delete(key))))
       .then(() => self.clients.claim()),
+  )
+})
+
+/*
+ * First-visit warm-up. Registration happens on `load`, by which time the
+ * browser has already fetched the hashed entry bundles without the worker
+ * controlling the page. Those requests are never intercepted, so an offline
+ * reload would serve the cached shell and then fail on every /assets/ request.
+ * The page posts the asset URLs it actually loaded and we cache them here.
+ */
+self.addEventListener('message', (event) => {
+  const data = event.data
+  if (!data || data.type !== 'warm-assets' || !Array.isArray(data.urls)) return
+
+  event.waitUntil(
+    caches.open(ASSET_CACHE).then((cache) =>
+      Promise.all(
+        data.urls.map((raw) => {
+          let url
+          try {
+            url = new URL(raw, self.location.origin)
+          } catch {
+            return undefined
+          }
+          // Never fetch whatever a message happens to name.
+          if (url.origin !== self.location.origin) return undefined
+          if (!url.pathname.startsWith('/assets/')) return undefined
+          return cache.match(url.href).then((hit) => (hit ? undefined : cache.add(url.href).catch(() => undefined)))
+        }),
+      ),
+    ),
   )
 })
 
@@ -102,7 +157,11 @@ self.addEventListener('fetch', (event) => {
     return
   }
 
-  // Icons, manifest, favicon: serve cached, refresh in the background.
+  // Anything else same-origin that is not on the static allowlist is left to
+  // the network, so dynamic responses are never served from a pinned cache.
+  if (!STATIC_PATHS.includes(url.pathname)) return
+
+  // Static files: serve cached, refresh in the background.
   event.respondWith(
     caches.match(request).then((cached) => {
       const fromNetwork = fetch(request)
