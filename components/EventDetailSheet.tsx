@@ -54,7 +54,13 @@ export function EventDetailSheet({ event, allEvents, analysis, isFavorite, onTog
       document.body.style.overflow = previousOverflow
       document.body.style.paddingRight = previousPaddingRight
       if (appRoot) { appRoot.removeAttribute('inert'); appRoot.removeAttribute('aria-hidden') }
-      restoreFocusRef.current?.focus()
+      const opener = restoreFocusRef.current
+      if (opener && opener.isConnected) {
+        opener.focus()
+        return
+      }
+      const activeNav = Array.from(document.querySelectorAll<HTMLElement>('[aria-current="page"]')).find((node) => node.isConnected)
+      activeNav?.focus()
     }
   }, [event, onClose, restoreFocusRef, appRootRef])
 
