@@ -6,6 +6,7 @@ export function ConflictBanner({ summary }: { summary: AgendaConflictSummary }) 
   const warning = summary.tone === 'warning'
   return (
     <div
+      role={warning ? 'alert' : 'status'}
       className={`flex items-start gap-2.5 rounded-xl border px-3.5 py-3 ${
         warning ? 'border-amber-200 bg-amber-50' : 'border-slate-200 bg-slate-50'
       }`}
