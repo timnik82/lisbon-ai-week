@@ -1,0 +1,171 @@
+import { describe, expect, it } from 'vitest'
+import catalog from '../data/catalog.json'
+import { events } from '../data/events'
+import type { VerificationStatus } from '../types/event'
+
+// The catalog is the canonical Lisbon AI Week 2026 snapshot. These assertions are
+// deterministic expectations pinned to that immutable file; they must not be
+// "fixed" by editing catalog.json.
+const EXPECTED_RECORDS = 71
+const EXPECTED_UNIQUE_IDS = 71
+const EXPECTED_DATED = 35
+const EXPECTED_TBD = 36
+const EXPECTED_NULL_DESCRIPTIONS = 17
+const EXPECTED_STATUS_COUNTS: Record<VerificationStatus, number> = {
+  verified: 12,
+  verified_with_conflict: 1,
+  unverified: 58,
+}
+
+// Stable sample IDs drawn from the source catalog. Kept as explicit constants so a
+// regression that rewrites/regenerates IDs fails loudly instead of silently passing.
+const STABLE_VERIFIED_IDS = [
+  'ea6439ca3f88',
+  'f9bf1a80043a',
+  '9ff57efb7640',
+  '327e7fb5d9ff',
+  'fdd84a498a38',
+  'cd09157c333a',
+  'd02a8ab95fe8',
+  'ad7204602d0a',
+  '4c1a43925828',
+  '6bd68fc2c99e',
+  'abdd9e021b61',
+  'eb6bb6a6b5d4',
+] as const
+const STABLE_CONFLICT_ID = '8c2c87cefe31'
+const STABLE_ALIAS_ID = 'fdd84a498a38'
+const STABLE_FIRST_IDS = ['ea6439ca3f88', 'f9bf1a80043a', '8c2c87cefe31'] as const
+
+describe('catalog.json shape', () => {
+  it('is a non-empty array of records', () => {
+    expect(Array.isArray(catalog)).toBe(true)
+    expect(catalog.length).toBe(EXPECTED_RECORDS)
+  })
+
+  it('has exactly 71 unique IDs', () => {
+    const ids = catalog.map((record) => record.id)
+    expect(ids.length).toBe(EXPECTED_UNIQUE_IDS)
+    expect(new Set(ids).size).toBe(EXPECTED_UNIQUE_IDS)
+  })
+
+  it('has no blank or duplicate IDs', () => {
+    const ids = catalog.map((record) => record.id)
+    expect(ids.every((id) => typeof id === 'string' && id.trim().length > 0)).toBe(true)
+    expect(new Set(ids).size).toBe(ids.length)
+  })
+
+  it('carries all ScheduleEvent fields on every record', () => {
+    const expectedKeys = [
+      'id',
+      'title',
+      'description',
+      'sourceUrl',
+      'registrationUrl',
+      'timezone',
+      'date',
+      'start',
+      'end',
+      'endDate',
+      'category',
+      'venue',
+      'verificationStatus',
+      'checkedAt',
+      'uncertainty',
+      'aliases',
+    ]
+    for (const record of catalog) {
+      expect(Object.keys(record)).toEqual(expectedKeys)
+    }
+  })
+})
+
+describe('catalog.json date coverage', () => {
+  it('has 35 dated records', () => {
+    expect(catalog.filter((record) => record.date).length).toBe(EXPECTED_DATED)
+  })
+
+  it('has 36 TBD records (no date)', () => {
+    expect(catalog.filter((record) => !record.date).length).toBe(EXPECTED_TBD)
+  })
+
+  it('dated records use ISO YYYY-MM-DD and dated+TBD sums to the full catalog', () => {
+    const dated = catalog.filter((record) => record.date)
+    expect(dated.every((record) => /^\d{4}-\d{2}-\d{2}$/.test(record.date as string))).toBe(true)
+    expect(dated.length + catalog.filter((record) => !record.date).length).toBe(EXPECTED_RECORDS)
+  })
+})
+
+describe('catalog.json descriptions', () => {
+  it('has 17 null descriptions and never uses empty strings', () => {
+    expect(catalog.filter((record) => record.description === null).length).toBe(EXPECTED_NULL_DESCRIPTIONS)
+    expect(catalog.some((record) => record.description === '')).toBe(false)
+  })
+})
+
+describe('catalog.json verification status', () => {
+  it('matches expected status counts', () => {
+    const counts = catalog.reduce<Record<string, number>>((acc, record) => {
+      acc[record.verificationStatus] = (acc[record.verificationStatus] ?? 0) + 1
+      return acc
+    }, {})
+    expect(counts).toEqual(EXPECTED_STATUS_COUNTS)
+  })
+
+  it('only uses the three allowed statuses and sums to 71', () => {
+    const allowed = Object.keys(EXPECTED_STATUS_COUNTS)
+    expect(catalog.every((record) => allowed.includes(record.verificationStatus))).toBe(true)
+    const total = Object.values(EXPECTED_STATUS_COUNTS).reduce((sum, value) => sum + value, 0)
+    expect(total).toBe(EXPECTED_RECORDS)
+  })
+})
+
+describe('catalog.json stable sample IDs', () => {
+  it('keeps every known verified ID', () => {
+    const ids = new Set(catalog.map((record) => record.id))
+    for (const id of STABLE_VERIFIED_IDS) {
+      expect(ids.has(id)).toBe(true)
+    }
+  })
+
+  it('keeps the known conflict ID and the known alias ID', () => {
+    const conflict = catalog.find((record) => record.id === STABLE_CONFLICT_ID)
+    expect(conflict?.verificationStatus).toBe('verified_with_conflict')
+    const alias = catalog.find((record) => record.id === STABLE_ALIAS_ID)
+    expect(alias?.aliases).not.toBeNull()
+    expect(alias?.aliases?.relation).toBe('possible_alias_of')
+  })
+
+  it('preserves the leading record IDs in source order', () => {
+    expect(catalog.slice(0, STABLE_FIRST_IDS.length).map((record) => record.id)).toEqual([...STABLE_FIRST_IDS])
+  })
+})
+
+describe('data/events.ts projection', () => {
+  it('maps every catalog record one-to-one, order preserved', () => {
+    expect(events.length).toBe(EXPECTED_RECORDS)
+    expect(events.map((event) => event.id)).toEqual(catalog.map((record) => record.id))
+  })
+
+  it('copies field values verbatim (no rewriting)', () => {
+    for (let index = 0; index < catalog.length; index += 1) {
+      const record = catalog[index]
+      const event = events[index]
+      expect(event.title).toBe(record.title)
+      expect(event.description).toBe(record.description)
+      expect(event.sourceUrl).toBe(record.sourceUrl)
+      expect(event.registrationUrl).toBe(record.registrationUrl)
+      expect(event.timezone).toBe(record.timezone)
+      expect(event.date).toBe(record.date)
+      expect(event.start).toBe(record.start)
+      expect(event.end).toBe(record.end)
+      expect(event.endDate).toBe(record.endDate)
+      expect(event.category).toBe(record.category)
+      expect(event.venue).toBe(record.venue)
+      expect(event.verificationStatus).toBe(record.verificationStatus)
+      expect(event.checkedAt).toBe(record.checkedAt)
+      expect(event.uncertainty).toBe(record.uncertainty)
+      expect(event.aliases).toEqual(record.aliases)
+    }
+  })
+})
