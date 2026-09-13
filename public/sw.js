@@ -36,6 +36,17 @@ const SHELL_CACHE = VERSION + '-shell'
 const ASSET_CACHE = VERSION + '-assets'
 const KEEP = [SHELL_CACHE, ASSET_CACHE]
 
+// resultingClientIds whose navigation fell back to the cached shell. Memory
+// only: the page asks once at boot ('shell-source-ping'), so losing the set to
+// a worker restart just skips the offline banner for that one load.
+const OFFLINE_NAVIGATIONS = new Set()
+
+// Servers may add `Vary: Origin` to responses (vite preview does). Module
+// scripts and the manifest are fetched in cors mode and carry an Origin
+// header, while warm-assets entries were stored by a request without one —
+// a strict match would miss and the cached asset would be unusable offline.
+const MATCH_OPTS = { ignoreVary: true }
+
 // Without these the app cannot boot offline, so a failure here should fail the
 // install and leave the previous worker in place.
 const CORE_PRECACHE = ['/', '/manifest.webmanifest']
@@ -95,6 +106,18 @@ self.addEventListener('message', (event) => {
     return
   }
 
+  // The page asks after boot whether its navigation was served from the cached
+  // shell. Answer for its client id and forget it, so a later online reload is
+  // clean. (Posting to event.clientId at fetch time would hit the document
+  // being replaced, not the one that boots.)
+  if (data && data.type === 'shell-source-ping' && event.source) {
+    event.source.postMessage({
+      type: 'shell-source',
+      offline: OFFLINE_NAVIGATIONS.delete(event.source.id) === true,
+    })
+    return
+  }
+
   if (!data || data.type !== 'warm-assets' || !Array.isArray(data.urls)) return
 
   event.waitUntil(
@@ -110,7 +133,7 @@ self.addEventListener('message', (event) => {
           // Never fetch whatever a message happens to name.
           if (url.origin !== self.location.origin) return undefined
           if (!url.pathname.startsWith('/assets/')) return undefined
-          return cache.match(url.href).then((hit) => (hit ? undefined : cache.add(url.href).catch(() => undefined)))
+          return cache.match(url.href, MATCH_OPTS).then((hit) => (hit ? undefined : cache.add(url.href).catch(() => undefined)))
         }),
       ),
     ),
@@ -147,20 +170,11 @@ self.addEventListener('fetch', (event) => {
           return response
         })
         .catch(() =>
-          caches.match('/').then((cached) => {
-            // Tell the page this load came from the cache: navigator.onLine
-            // still reports true on captive-portal Wi-Fi, so the offline
-            // banner needs this signal rather than the browser's guess.
-            // waitUntil keeps the worker alive until postMessage lands; this
-            // callback runs while respondWith is still pending, so the event
-            // is active and waitUntil is legal here.
-            if (cached && event.clientId) {
-              event.waitUntil(
-                self.clients
-                  .get(event.clientId)
-                  .then((client) => client && client.postMessage({ type: 'served-offline-shell' }))
-                  .catch(() => undefined),
-              )
+          caches.match('/', MATCH_OPTS).then((cached) => {
+            // Record that this navigation was served from cache; the page asks
+            // for it after boot via 'shell-source-ping'.
+            if (cached && event.resultingClientId) {
+              OFFLINE_NAVIGATIONS.add(event.resultingClientId)
             }
             return cached || new Response('Offline', { status: 503, statusText: 'Offline' })
           }),
@@ -172,7 +186,7 @@ self.addEventListener('fetch', (event) => {
   // Content-hashed build output: cache first, it cannot go stale.
   if (url.pathname.startsWith('/assets/')) {
     event.respondWith(
-      caches.match(request).then(
+      caches.match(request, MATCH_OPTS).then(
         (cached) =>
           cached ||
           fetch(request).then((response) => {
@@ -190,7 +204,7 @@ self.addEventListener('fetch', (event) => {
 
   // Static files: serve cached, refresh in the background.
   event.respondWith(
-    caches.match(request).then((cached) => {
+    caches.match(request, MATCH_OPTS).then((cached) => {
       const fromNetwork = fetch(request)
         .then((response) => {
           if (!response.ok) return response

@@ -205,8 +205,21 @@ describe('service worker', () => {
 
   it('tells the page when a navigation was served from the cached shell', () => {
     // navigator.onLine stays true on captive-portal Wi-Fi, so the offline
-    // banner relies on this message rather than the browser's guess.
-    expect(sw).toContain("'served-offline-shell'")
+    // banner relies on this handshake rather than the browser's guess.
+    expect(sw).toContain('event.resultingClientId')
+    expect(sw).toContain("'shell-source-ping'")
+    const entry = readFileSync(resolve(root, 'index.tsx'), 'utf8')
+    expect(entry).toContain('shell-source-ping')
+  })
+
+  it('ignores Vary when matching cached responses', () => {
+    // vite preview (and some hosts) adds `Vary: Origin`; module-script and
+    // manifest requests carry Origin while warm-assets entries were stored
+    // without it, so a strict match would miss every asset offline.
+    expect(sw).toContain('ignoreVary: true')
+    // Every cache lookup must take the option — a bare match() here would
+    // silently break offline assets again.
+    expect(sw.match(/\.match\([^,]+\)\.then/g) ?? []).toEqual([])
   })
 
   it('surfaces a waiting worker and reloads only after it takes over', () => {

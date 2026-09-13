@@ -30,14 +30,16 @@ if (import.meta.env.PROD && "serviceWorker" in navigator) {
     window.location.reload();
   });
 
-  // The worker reports when it answered a navigation from the cached shell.
-  // navigator.onLine stays true on captive-portal venue Wi-Fi, so this is the
-  // more honest offline signal; the banner clears on the next 'online' event.
+  // The worker records the id of any client whose navigation it served from
+  // the cached shell; ask it on boot. (Answering at fetch time would reach the
+  // document being replaced, not this one.) navigator.onLine stays true on
+  // captive-portal venue Wi-Fi, so this is the more honest offline signal.
   navigator.serviceWorker.addEventListener("message", (event) => {
-    if (event.data && event.data.type === "served-offline-shell") {
+    if (event.data && event.data.type === "shell-source" && event.data.offline) {
       noteOfflineShell();
     }
   });
+  navigator.serviceWorker.controller?.postMessage({ type: "shell-source-ping" });
 
   window.addEventListener("load", () => {
     navigator.serviceWorker
