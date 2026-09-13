@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useRef } from 'react'
 import { Search, X } from 'lucide-react'
 import type { EventCategory } from '../types/event'
 
@@ -20,6 +20,11 @@ export function FilterBar({
   categories,
 }: FilterBarProps) {
   const options: CategoryFilter[] = ['all', ...categories]
+  const inputRef = useRef<HTMLInputElement>(null)
+  const clearSearch = () => {
+    onQueryChange('')
+    inputRef.current?.focus()
+  }
 
   return (
     <div className="space-y-2.5">
@@ -29,6 +34,7 @@ export function FilterBar({
           aria-hidden="true"
         />
         <input
+          ref={inputRef}
           type="search"
           value={query}
           onChange={(e) => onQueryChange(e.target.value)}
@@ -39,7 +45,7 @@ export function FilterBar({
         {query ? (
           <button
             type="button"
-            onClick={() => onQueryChange('')}
+            onClick={clearSearch}
             aria-label="Clear search"
             className="absolute right-1 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-lg text-slate-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600"
           >
