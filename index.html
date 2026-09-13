@@ -1,9 +1,32 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>Lisbon AI Week</title>
+    <meta
+      name="description"
+      content="Unofficial timetable for Lisbon AI Week, 21-27 September 2026. Browse listings, save your own agenda and see time clashes."
+    />
+
+    <!-- Installable web app -->
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta name="theme-color" content="#FFFFFF" />
+
+    <!--
+      iOS home-screen install. Safari ignores the manifest icons for the
+      home-screen tile and reads apple-touch-icon instead, so this PNG is the
+      one that actually appears on the phone. It must be 180x180, fully opaque
+      and square: iOS applies its own corner mask.
+    -->
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" sizes="180x180" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="AI Week" />
+
+    <link rel="icon" href="/favicon.ico" sizes="any" />
+    <link rel="icon" type="image/png" href="/icon-192.png" sizes="192x192" />
   </head>
   <body>
     <div id="root"></div>
