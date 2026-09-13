@@ -113,9 +113,26 @@ describe('service worker', () => {
   })
 
   it('serves navigations network-first so a stale shell cannot strand the user', () => {
-    const nav = sw.slice(sw.indexOf("request.mode === 'navigate'"))
-    // the fetch must come before any caches.match in the navigation branch
-    expect(nav.indexOf('fetch(request)')).toBeLessThan(nav.indexOf('caches.match'))
+    const branchStart = sw.indexOf("request.mode === 'navigate'")
+    expect(branchStart, 'navigation branch not found').toBeGreaterThan(-1)
+    const nav = sw.slice(branchStart)
+    const fetchAt = nav.indexOf('fetch(request)')
+    const cacheAt = nav.indexOf('caches.match')
+    // Both probes must actually be present, otherwise a -1 would satisfy the
+    // ordering check vacuously and the assertion would prove nothing.
+    expect(fetchAt, 'no fetch in the navigation branch').toBeGreaterThan(-1)
+    expect(cacheAt, 'no cache fallback in the navigation branch').toBeGreaterThan(-1)
+    expect(fetchAt).toBeLessThan(cacheAt)
+  })
+
+  it('registers the background refresh while the fetch event is still active', () => {
+    // Calling waitUntil from inside the fetch's own .then() throws
+    // InvalidStateError once a cached response has been returned, which
+    // silently disables the refresh. It must be registered synchronously.
+    const branch = sw.slice(sw.indexOf('// Icons, manifest, favicon'))
+    const waitAt = branch.indexOf('event.waitUntil(fromNetwork)')
+    expect(waitAt, 'background refresh is not registered synchronously').toBeGreaterThan(-1)
+    expect(waitAt).toBeLessThan(branch.indexOf('return cached || fromNetwork'))
   })
 
   it('is registered only in production builds', () => {
@@ -126,9 +143,13 @@ describe('service worker', () => {
 })
 
 describe('header wordmark', () => {
-  it('is a transparent PNG', () => {
+  it('is a transparent PNG whose real size matches the intrinsic attributes', () => {
     const png = readPng(pub('logo-aiw.png'))
     expect(png.colourType).toBe(RGBA)
+    // Schedule.tsx hard-codes width={431} height={256}. If the artwork is ever
+    // swapped for one with a different aspect ratio, those attributes would
+    // distort it silently, so pin both dimensions here rather than just height.
+    expect(png.width).toBe(431)
     expect(png.height).toBe(256)
   })
 
