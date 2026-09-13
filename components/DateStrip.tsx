@@ -20,7 +20,7 @@ export function DateStrip({ options, value, onChange }: DateStripProps) {
     <div
       role="group"
       aria-label="Filter schedule by date"
-      className="-mx-5 flex gap-2 overflow-x-auto px-5 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      className="-mx-5 flex gap-2 overflow-x-auto px-5 pb-1 pt-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
     >
       {options.map((option) => {
         const selected = option.value === value
