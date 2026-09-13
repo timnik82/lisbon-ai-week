@@ -107,10 +107,17 @@ self.addEventListener('fetch', (event) => {
     caches.match(request).then((cached) => {
       const fromNetwork = fetch(request)
         .then((response) => {
-          if (response.ok) event.waitUntil(putInCache(SHELL_CACHE, request, response))
-          return response
+          if (!response.ok) return response
+          return putInCache(SHELL_CACHE, request, response).then(() => response)
         })
         .catch(() => cached || new Response('', { status: 504, statusText: 'Offline' }))
+
+      // waitUntil must be registered while the event is still active. This
+      // callback runs while the promise handed to respondWith is still pending,
+      // so it is. Calling waitUntil from inside the fetch's own .then() would
+      // throw InvalidStateError whenever a cached response had already been
+      // returned above, which silently disabled the background refresh.
+      event.waitUntil(fromNetwork)
       return cached || fromNetwork
     }),
   )
