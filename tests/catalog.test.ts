@@ -8,12 +8,12 @@ import type { VerificationStatus } from '../types/event'
 // "fixed" by editing catalog.json.
 const EXPECTED_RECORDS = 71
 const EXPECTED_UNIQUE_IDS = 71
-const EXPECTED_DATED = 35
-const EXPECTED_TBD = 36
+const EXPECTED_DATED = 34
+const EXPECTED_TBD = 37
 const EXPECTED_NULL_DESCRIPTIONS = 17
 const EXPECTED_STATUS_COUNTS: Record<VerificationStatus, number> = {
-  verified: 12,
-  verified_with_conflict: 1,
+  verified: 11,
+  verified_with_conflict: 2,
   unverified: 58,
 }
 
@@ -27,13 +27,12 @@ const STABLE_VERIFIED_IDS = [
   'fdd84a498a38',
   'cd09157c333a',
   'd02a8ab95fe8',
-  'ad7204602d0a',
   '4c1a43925828',
   '6bd68fc2c99e',
   'abdd9e021b61',
   'eb6bb6a6b5d4',
 ] as const
-const STABLE_CONFLICT_ID = '8c2c87cefe31'
+const STABLE_CONFLICT_IDS = ['8c2c87cefe31', 'ad7204602d0a'] as const
 const STABLE_ALIAS_ID = 'fdd84a498a38'
 const STABLE_FIRST_IDS = ['ea6439ca3f88', 'f9bf1a80043a', '8c2c87cefe31'] as const
 
@@ -78,14 +77,18 @@ describe('catalog.json shape', () => {
       expect(Object.keys(record)).toEqual(expectedKeys)
     }
   })
+
+  it('requires a non-empty uncertainty string on every record', () => {
+    expect(catalog.every((record) => typeof record.uncertainty === 'string' && record.uncertainty.trim().length > 0)).toBe(true)
+  })
 })
 
 describe('catalog.json date coverage', () => {
-  it('has 35 dated records', () => {
+  it('has 34 dated records', () => {
     expect(catalog.filter((record) => record.date).length).toBe(EXPECTED_DATED)
   })
 
-  it('has 36 TBD records (no date)', () => {
+  it('has 37 TBD records (no date)', () => {
     expect(catalog.filter((record) => !record.date).length).toBe(EXPECTED_TBD)
   })
 
@@ -112,25 +115,32 @@ describe('catalog.json verification status', () => {
     expect(counts).toEqual(EXPECTED_STATUS_COUNTS)
   })
 
-  it('only uses the three allowed statuses and sums to 71', () => {
-    const allowed = Object.keys(EXPECTED_STATUS_COUNTS)
+  it('only uses the three allowed statuses and sums to the actual catalog total', () => {
+    const allowed = ['verified', 'verified_with_conflict', 'unverified']
     expect(catalog.every((record) => allowed.includes(record.verificationStatus))).toBe(true)
-    const total = Object.values(EXPECTED_STATUS_COUNTS).reduce((sum, value) => sum + value, 0)
-    expect(total).toBe(EXPECTED_RECORDS)
+    // Derive the total from the catalog records themselves, not from the expected
+    // constants — so this test checks internal consistency rather than restating
+    // EXPECTED_STATUS_COUNTS.
+    expect(catalog.length).toBe(EXPECTED_RECORDS)
+    const countedRecords = Object.values(EXPECTED_STATUS_COUNTS).reduce((sum, value) => sum + value, 0)
+    expect(countedRecords).toBe(catalog.length)
   })
 })
 
 describe('catalog.json stable sample IDs', () => {
-  it('keeps every known verified ID', () => {
-    const ids = new Set(catalog.map((record) => record.id))
+  it('keeps every known verified ID, all still verified', () => {
+    const byId = new Map(catalog.map((record) => [record.id, record]))
     for (const id of STABLE_VERIFIED_IDS) {
-      expect(ids.has(id)).toBe(true)
+      expect(byId.has(id)).toBe(true)
+      expect(byId.get(id)?.verificationStatus).toBe('verified')
     }
   })
 
-  it('keeps the known conflict ID and the known alias ID', () => {
-    const conflict = catalog.find((record) => record.id === STABLE_CONFLICT_ID)
-    expect(conflict?.verificationStatus).toBe('verified_with_conflict')
+  it('keeps every known conflict ID and the known alias ID', () => {
+    for (const id of STABLE_CONFLICT_IDS) {
+      const conflict = catalog.find((record) => record.id === id)
+      expect(conflict?.verificationStatus).toBe('verified_with_conflict')
+    }
     const alias = catalog.find((record) => record.id === STABLE_ALIAS_ID)
     expect(alias?.aliases).not.toBeNull()
     expect(alias?.aliases?.relation).toBe('possible_alias_of')
