@@ -118,7 +118,7 @@ export function summarizeSet(selected: ScheduleEvent[]): AgendaConflictSummary {
     return { tone: 'warning', headline: 'Same start time', detail: 'Overlap not verified because one or more intervals are incomplete.' }
   }
   if (analysis.incomplete) {
-    return { tone: 'warning', headline: 'Can’t check all overlaps—end times missing', detail: 'Some saved listings lack complete date or time information.' }
+    return { tone: 'warning', headline: 'Can’t check all overlaps—date or time details missing', detail: 'Some saved listings lack complete date or time information.' }
   }
   if (selected.some((event) => event.verificationStatus !== 'verified')) {
     return { tone: 'warning', headline: 'Source quality needs review', detail: 'All times are complete, but one or more saved listings are not rechecked.' }
