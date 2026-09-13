@@ -44,7 +44,7 @@ export function EventRow({ event, isFavorite, onToggleFavorite, onOpen, sameStar
             <button type="button" onClick={(e) => onOpen(event.id, e.currentTarget)} className="group -m-2 flex min-h-[44px] flex-1 items-start gap-2 rounded-xl p-2 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2">
               <span className="sr-only">Open details for </span>
               <span className="min-w-0 flex-1 space-y-2">
-                <span className="block text-[19px] font-semibold leading-snug tracking-[-0.01em] text-slate-900">{event.title}</span>
+                <span className="block break-words text-[19px] font-semibold leading-snug tracking-[-0.01em] text-slate-900">{event.title}</span>
                 <span className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[14px] text-slate-600"><span className="inline-flex items-center gap-1"><MapPin className="h-3.5 w-3.5 text-slate-400" aria-hidden="true" />{event.venue ?? 'Venue not published'}</span></span>
                 <EventBadges event={event} sameStart={sameStart} overlap={overlap} />
               </span>
