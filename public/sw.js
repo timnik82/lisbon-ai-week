@@ -151,11 +151,16 @@ self.addEventListener('fetch', (event) => {
             // Tell the page this load came from the cache: navigator.onLine
             // still reports true on captive-portal Wi-Fi, so the offline
             // banner needs this signal rather than the browser's guess.
+            // waitUntil keeps the worker alive until postMessage lands; this
+            // callback runs while respondWith is still pending, so the event
+            // is active and waitUntil is legal here.
             if (cached && event.clientId) {
-              self.clients
-                .get(event.clientId)
-                .then((client) => client && client.postMessage({ type: 'served-offline-shell' }))
-                .catch(() => undefined)
+              event.waitUntil(
+                self.clients
+                  .get(event.clientId)
+                  .then((client) => client && client.postMessage({ type: 'served-offline-shell' }))
+                  .catch(() => undefined),
+              )
             }
             return cached || new Response('Offline', { status: 503, statusText: 'Offline' })
           }),

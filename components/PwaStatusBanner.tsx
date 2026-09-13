@@ -20,13 +20,16 @@ export function PwaStatusBanner({ offline, updateReady, onReload }: PwaStatusBan
           <div className="min-w-0 flex-1">
             <p className="text-[14px] font-semibold text-blue-900">A new version is ready</p>
             <p className="text-[13px] leading-snug text-blue-800">
-              Reload for the latest listings and fixes.
+              {offline
+                ? 'Connect to reload into the latest listings.'
+                : 'Reload for the latest listings and fixes.'}
             </p>
           </div>
           <button
             type="button"
             onClick={onReload}
-            className="shrink-0 rounded-lg bg-blue-600 px-3 py-1.5 text-[13px] font-semibold text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
+            disabled={offline}
+            className="shrink-0 rounded-lg bg-blue-600 px-3 py-1.5 text-[13px] font-semibold text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
           >
             Reload
           </button>

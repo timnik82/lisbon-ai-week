@@ -2,7 +2,13 @@ import "./index.css";
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { App } from "./App";
-import { noteOfflineShell, noteWaitingWorker } from "./hooks/usePwaStatus";
+import {
+  clearWaitingWorker,
+  isUpdateRequested,
+  noteConnectivity,
+  noteOfflineShell,
+  noteWaitingWorker,
+} from "./hooks/usePwaStatus";
 
 const rootEl = document.getElementById("root");
 if (rootEl) {
@@ -14,11 +20,12 @@ if (rootEl) {
 // but it is logged, because a rejected install (a renamed precache entry, say)
 // would otherwise disable offline support with no signal at all.
 if (import.meta.env.PROD && "serviceWorker" in navigator) {
-  // The new worker took over after the user chose "Reload to update". Guarded
-  // so a second controllerchange cannot loop reloads.
+  // Reload only after the user chose "Reload to update" — without the
+  // isUpdateRequested() gate, the worker's first clients.claim() (initial
+  // install) also fires controllerchange and would reload every first visit.
   let reloading = false;
   navigator.serviceWorker.addEventListener("controllerchange", () => {
-    if (reloading) return;
+    if (reloading || !isUpdateRequested()) return;
     reloading = true;
     window.location.reload();
   });
@@ -49,6 +56,9 @@ if (import.meta.env.PROD && "serviceWorker" in navigator) {
             if (incoming.state === "installed" && navigator.serviceWorker.controller) {
               noteWaitingWorker(incoming);
             }
+            if (incoming.state === "redundant") {
+              clearWaitingWorker(incoming);
+            }
           });
         });
         return navigator.serviceWorker.ready;
@@ -68,10 +78,15 @@ if (import.meta.env.PROD && "serviceWorker" in navigator) {
         }
 
         // An installed client can stay open for days; check for a new worker
-        // whenever the app returns to the foreground.
+        // whenever the app returns to the foreground. A resolved update() also
+        // proves connectivity, which clears a stale served-offline-shell flag
+        // when no 'online' event ever fired (captive portal healing).
         document.addEventListener("visibilitychange", () => {
           if (document.visibilityState === "visible") {
-            registration.update().catch(() => undefined);
+            registration
+              .update()
+              .then(() => noteConnectivity())
+              .catch(() => undefined);
           }
         });
       })

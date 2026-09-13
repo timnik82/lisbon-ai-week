@@ -14,6 +14,10 @@ import { useCallback, useSyncExternalStore } from 'react'
 
 let offlineShell = false
 let waitingWorker: ServiceWorker | null = null
+// Set when the user chooses "Reload to update": index.tsx only reloads on
+// controllerchange while this is set, so the worker's first claim (initial
+// install) cannot trigger a spurious reload.
+let updateRequested = false
 
 interface PwaSnapshot {
   offline: boolean
@@ -48,6 +52,25 @@ export function noteWaitingWorker(worker: ServiceWorker) {
   emit()
 }
 
+/** A newer worker superseded one we were holding; forget it. */
+export function clearWaitingWorker(worker: ServiceWorker) {
+  if (waitingWorker === worker) {
+    waitingWorker = null
+    emit()
+  }
+}
+
+/** A request just succeeded (registration.update()), proving connectivity. */
+export function noteConnectivity() {
+  if (!offlineShell) return
+  offlineShell = false
+  emit()
+}
+
+export function isUpdateRequested() {
+  return updateRequested
+}
+
 function subscribe(listener: () => void) {
   listeners.add(listener)
   const backOnline = () => {
@@ -71,6 +94,7 @@ function getSnapshot() {
 export function usePwaStatus() {
   const { offline, updateReady } = useSyncExternalStore(subscribe, getSnapshot)
   const reloadForUpdate = useCallback(() => {
+    updateRequested = true
     // The waiting worker activates on receipt; the controllerchange listener in
     // index.tsx then reloads the page onto the new shell.
     waitingWorker?.postMessage({ type: 'skip-waiting' })
