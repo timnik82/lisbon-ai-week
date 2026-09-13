@@ -52,13 +52,23 @@ tests/                  catalog, conflict and format tests
 `data/catalog.json` contains **71 source listings** reconciled from two overlapping scraped
 exports of the Lisbon AI Week site.
 
-- Each record has a `verificationStatus` and an `uncertainty` field; the latter can be `null` when
-  no specific warning text is needed. Status counts are 12 `verified`, 1 `verified_with_conflict`,
-  and 58 `unverified`.
-- Many entries have **no confirmed date, start time or end time** (17 have no description and 36
-  have no date/start). The UI shows "End time unknown" / "Time unknown" instead of inferring one.
+- Each record has a `verificationStatus` and a **required** `uncertainty` string (it is never null in
+  the current catalog). Status counts are 11 `verified`, 2 `verified_with_conflict`, and 58
+  `unverified`.
+- Many entries have **no confirmed date, start time or end time** (17 have no description, and 37 of
+  the 71 records have no date at all). The UI shows "To confirm" where a date/start is missing, "Time
+  not confirmed" when there is no start time, and "End time unknown" when a start exists but no end —
+  it never infers one.
+- Four listings carry **source-side truncated descriptions**: the official page for each was checked
+  on 13 Sep 2026 and its published event-details text ends mid-word, so the description here is
+  incomplete. Their text is stored as published and the missing tail was not invented:
+  `fcaf5088d838` (AI OS), `251f94811db6` (AI in banking), `4d1a8946f92d` (Cafe Compute Meetup),
+  `b2a60634dae9` (AI Night Thinkers).
 - Probable aliases remain flagged as separate source listings rather than silently merged. Two
   failed/stub source records are quarantined outside this 71-listing application catalog.
+- `ad7204602d0a` (Cascais AI Afterwork) is `verified_with_conflict`: the official page header says
+  Sep 24, 19:00, while its body repeatedly says Friday / Friday evening. The page contradicts itself,
+  so its date is left unconfirmed (null) while the 19:00 start is kept from the header.
 
 **This is a personal, unverified snapshot — not a fully verified official programme.** Treat every
 row as unconfirmed until it is checked against the organiser's own schedule or registration page,
