@@ -25,6 +25,9 @@ if (import.meta.env.PROD && "serviceWorker" in navigator) {
   // install) also fires controllerchange and would reload every first visit.
   let reloading = false;
   navigator.serviceWorker.addEventListener("controllerchange", () => {
+    // First claim may also be the first moment this page has a controller to
+    // ask, so retry the shell-source ping here too.
+    askShellSource();
     if (reloading || !isUpdateRequested()) return;
     reloading = true;
     window.location.reload();
@@ -39,7 +42,14 @@ if (import.meta.env.PROD && "serviceWorker" in navigator) {
       noteOfflineShell();
     }
   });
-  navigator.serviceWorker.controller?.postMessage({ type: "shell-source-ping" });
+  // The ask is repeated: a boot-time ping can land before this page has a
+  // controller, or a worker restart can drop the worker's in-memory record
+  // before the ping arrives. A 'false' answer never clears a 'true' one
+  // already delivered, so re-asking is always safe.
+  const askShellSource = () => {
+    navigator.serviceWorker.controller?.postMessage({ type: "shell-source-ping" });
+  };
+  askShellSource();
 
   window.addEventListener("load", () => {
     navigator.serviceWorker
@@ -85,6 +95,7 @@ if (import.meta.env.PROD && "serviceWorker" in navigator) {
         // when no 'online' event ever fired (captive portal healing).
         document.addEventListener("visibilitychange", () => {
           if (document.visibilityState === "visible") {
+            askShellSource();
             registration
               .update()
               .then(() => noteConnectivity())

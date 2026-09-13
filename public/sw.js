@@ -37,9 +37,11 @@ const ASSET_CACHE = VERSION + '-assets'
 const KEEP = [SHELL_CACHE, ASSET_CACHE]
 
 // resultingClientIds whose navigation fell back to the cached shell. Memory
-// only: the page asks once at boot ('shell-source-ping'), so losing the set to
-// a worker restart just skips the offline banner for that one load.
+// only: losing the set to a worker restart just skips the offline banner for
+// that one load. Entries for pages that never boot are never claimed back, so
+// the set is bounded — the oldest id is evicted once it fills.
 const OFFLINE_NAVIGATIONS = new Set()
+const OFFLINE_NAV_LIMIT = 100
 
 // Servers may add `Vary: Origin` to responses (vite preview does). Module
 // scripts and the manifest are fetched in cors mode and carry an Origin
@@ -174,6 +176,9 @@ self.addEventListener('fetch', (event) => {
             // Record that this navigation was served from cache; the page asks
             // for it after boot via 'shell-source-ping'.
             if (cached && event.resultingClientId) {
+              if (OFFLINE_NAVIGATIONS.size >= OFFLINE_NAV_LIMIT) {
+                OFFLINE_NAVIGATIONS.delete(OFFLINE_NAVIGATIONS.values().next().value)
+              }
               OFFLINE_NAVIGATIONS.add(event.resultingClientId)
             }
             return cached || new Response('Offline', { status: 503, statusText: 'Offline' })
