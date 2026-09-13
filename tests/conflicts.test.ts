@@ -141,13 +141,22 @@ describe('summarizeSet', () => {
     })
   })
 
-  it('reports missing end times when nothing else is conclusive', () => {
+  it('reports missing date or time details when nothing else is conclusive', () => {
     const summary = summarizeSet([
       makeEvent({ id: 'a', date: '2026-09-24', start: '09:00', end: null }),
       makeEvent({ id: 'b', date: '2026-09-25', start: '11:00', end: null }),
     ])
     expect(summary.tone).toBe('warning')
-    expect(summary.headline).toBe('Can’t check all overlaps—end times missing')
+    expect(summary.headline).toBe('Can’t check all overlaps—date or time details missing')
+  })
+
+  it('uses the generic incomplete-details headline for unscheduled records too', () => {
+    const summary = summarizeSet([
+      makeEvent({ id: 'a', date: null, start: null, end: null }),
+      makeEvent({ id: 'b', date: '2026-09-25', start: '11:00', end: '12:00' }),
+    ])
+    expect(summary.tone).toBe('warning')
+    expect(summary.headline).toBe('Can’t check all overlaps—date or time details missing')
   })
 
   it('flags source quality when intervals are complete but not verified', () => {
