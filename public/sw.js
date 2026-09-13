@@ -25,12 +25,29 @@
  * loaded via a 'warm-assets' message so that the first offline launch works
  * too. See index.tsx.
  *
- * Bump VERSION to invalidate every cache on the next deploy.
+ * Bump VERSION to invalidate every cache on the next deploy. A VERSION bump
+ * leaves the new worker 'waiting' while the old one still controls open
+ * clients: the page shows "Reload to update" and posts 'skip-waiting' back,
+ * so the shell is never swapped under the user mid-session. A first install
+ * (no existing worker) still activates immediately.
  */
 const VERSION = 'aiw-v1'
 const SHELL_CACHE = VERSION + '-shell'
 const ASSET_CACHE = VERSION + '-assets'
 const KEEP = [SHELL_CACHE, ASSET_CACHE]
+
+// resultingClientIds whose navigation fell back to the cached shell. Memory
+// only: losing the set to a worker restart just skips the offline banner for
+// that one load. Entries for pages that never boot are never claimed back, so
+// the set is bounded — the oldest id is evicted once it fills.
+const OFFLINE_NAVIGATIONS = new Set()
+const OFFLINE_NAV_LIMIT = 100
+
+// Servers may add `Vary: Origin` to responses (vite preview does). Module
+// scripts and the manifest are fetched in cors mode and carry an Origin
+// header, while warm-assets entries were stored by a request without one —
+// a strict match would miss and the cached asset would be unusable offline.
+const MATCH_OPTS = { ignoreVary: true }
 
 // Without these the app cannot boot offline, so a failure here should fail the
 // install and leave the previous worker in place.
@@ -61,8 +78,7 @@ self.addEventListener('install', (event) => {
           cache.addAll(CORE_PRECACHE),
           ...OPTIONAL_PRECACHE.map((url) => cache.add(url).catch(() => undefined)),
         ]),
-      )
-      .then(() => self.skipWaiting()),
+      ),
   )
 })
 
@@ -84,6 +100,26 @@ self.addEventListener('activate', (event) => {
  */
 self.addEventListener('message', (event) => {
   const data = event.data
+
+  // The page chose "Reload to update": leave the waiting state so this worker
+  // activates and claims its clients.
+  if (data && data.type === 'skip-waiting') {
+    event.waitUntil(self.skipWaiting())
+    return
+  }
+
+  // The page asks after boot whether its navigation was served from the cached
+  // shell. Answer for its client id and forget it, so a later online reload is
+  // clean. (Posting to event.clientId at fetch time would hit the document
+  // being replaced, not the one that boots.)
+  if (data && data.type === 'shell-source-ping' && event.source) {
+    event.source.postMessage({
+      type: 'shell-source',
+      offline: OFFLINE_NAVIGATIONS.delete(event.source.id) === true,
+    })
+    return
+  }
+
   if (!data || data.type !== 'warm-assets' || !Array.isArray(data.urls)) return
 
   event.waitUntil(
@@ -99,7 +135,7 @@ self.addEventListener('message', (event) => {
           // Never fetch whatever a message happens to name.
           if (url.origin !== self.location.origin) return undefined
           if (!url.pathname.startsWith('/assets/')) return undefined
-          return cache.match(url.href).then((hit) => (hit ? undefined : cache.add(url.href).catch(() => undefined)))
+          return cache.match(url.href, MATCH_OPTS).then((hit) => (hit ? undefined : cache.add(url.href).catch(() => undefined)))
         }),
       ),
     ),
@@ -136,7 +172,17 @@ self.addEventListener('fetch', (event) => {
           return response
         })
         .catch(() =>
-          caches.match('/').then((cached) => cached || new Response('Offline', { status: 503, statusText: 'Offline' })),
+          caches.match('/', MATCH_OPTS).then((cached) => {
+            // Record that this navigation was served from cache; the page asks
+            // for it after boot via 'shell-source-ping'.
+            if (cached && event.resultingClientId) {
+              if (OFFLINE_NAVIGATIONS.size >= OFFLINE_NAV_LIMIT) {
+                OFFLINE_NAVIGATIONS.delete(OFFLINE_NAVIGATIONS.values().next().value)
+              }
+              OFFLINE_NAVIGATIONS.add(event.resultingClientId)
+            }
+            return cached || new Response('Offline', { status: 503, statusText: 'Offline' })
+          }),
         ),
     )
     return
@@ -145,7 +191,7 @@ self.addEventListener('fetch', (event) => {
   // Content-hashed build output: cache first, it cannot go stale.
   if (url.pathname.startsWith('/assets/')) {
     event.respondWith(
-      caches.match(request).then(
+      caches.match(request, MATCH_OPTS).then(
         (cached) =>
           cached ||
           fetch(request).then((response) => {
@@ -163,7 +209,7 @@ self.addEventListener('fetch', (event) => {
 
   // Static files: serve cached, refresh in the background.
   event.respondWith(
-    caches.match(request).then((cached) => {
+    caches.match(request, MATCH_OPTS).then((cached) => {
       const fromNetwork = fetch(request)
         .then((response) => {
           if (!response.ok) return response

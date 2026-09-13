@@ -190,6 +190,44 @@ describe('service worker', () => {
     const entry = readFileSync(resolve(root, 'index.tsx'), 'utf8')
     expect(entry).toMatch(/\.catch\(\(error\) => \{\s*console\.warn/)
   })
+
+  it('does not activate on install while an older worker controls the page', () => {
+    // Mid-session activation would swap the shell under the user. The page
+    // offers "Reload to update" instead, and posts 'skip-waiting' on click.
+    const install = sw.slice(
+      sw.indexOf("self.addEventListener('install'"),
+      sw.indexOf("self.addEventListener('activate'"),
+    )
+    expect(install).not.toContain('skipWaiting()')
+    expect(sw).toContain("data.type === 'skip-waiting'")
+    expect(sw).toContain('self.skipWaiting()')
+  })
+
+  it('tells the page when a navigation was served from the cached shell', () => {
+    // navigator.onLine stays true on captive-portal Wi-Fi, so the offline
+    // banner relies on this handshake rather than the browser's guess.
+    expect(sw).toContain('event.resultingClientId')
+    expect(sw).toContain("'shell-source-ping'")
+    const entry = readFileSync(resolve(root, 'index.tsx'), 'utf8')
+    expect(entry).toContain('shell-source-ping')
+  })
+
+  it('ignores Vary when matching cached responses', () => {
+    // vite preview (and some hosts) adds `Vary: Origin`; module-script and
+    // manifest requests carry Origin while warm-assets entries were stored
+    // without it, so a strict match would miss every asset offline.
+    expect(sw).toContain('ignoreVary: true')
+    // Every cache lookup must take the option — a bare match() here would
+    // silently break offline assets again.
+    expect(sw.match(/\.match\([^,]+\)\.then/g) ?? []).toEqual([])
+  })
+
+  it('surfaces a waiting worker and reloads only after it takes over', () => {
+    const entry = readFileSync(resolve(root, 'index.tsx'), 'utf8')
+    expect(entry).toContain('registration.waiting')
+    expect(entry).toContain('updatefound')
+    expect(entry).toContain('controllerchange')
+  })
 })
 
 describe('header wordmark', () => {

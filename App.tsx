@@ -4,10 +4,12 @@ import type { Tab } from './components/BottomNav'
 import type { DateOption } from './components/DateStrip'
 import type { CategoryFilter } from './components/FilterBar'
 import { EventDetailSheet } from './components/EventDetailSheet'
+import { PwaStatusBanner } from './components/PwaStatusBanner'
 import { Schedule } from './pages/Schedule'
 import { MyAgenda } from './pages/MyAgenda'
 import { events as allEvents } from './data/events'
 import { useFavorites } from './hooks/useFavorites'
+import { usePwaStatus } from './hooks/usePwaStatus'
 import { analyzeConflicts } from './utils/conflicts'
 import { formatShortDate, formatWeekday, normalizeText } from './utils/format'
 import { WEEK_DATES, pickInitialDateFilter, todayInTimezone } from './utils/initialDate'
@@ -25,6 +27,7 @@ export function App() {
   const openerRef = useRef<HTMLElement | null>(null)
   const appRootRef = useRef<HTMLDivElement>(null)
   const { favorites, toggleFavorite, isFavorite } = useFavorites()
+  const { offline, updateReady, reloadForUpdate } = usePwaStatus()
   const categories = useMemo(() => Array.from(new Set(allEvents.map((event) => event.category))).sort(), [])
   const savedEvents = useMemo(() => allEvents.filter((event) => favorites.includes(event.id)), [favorites])
   const agendaAnalysis = useMemo(() => analyzeConflicts(savedEvents), [savedEvents])
@@ -45,5 +48,5 @@ export function App() {
   const closeDetails = useCallback(() => setOpenId(null), [])
   const resetFilters = () => { setQuery(''); setCategory('all'); setDateFilter('all') }
 
-  return <div className="flex min-h-screen w-full flex-col bg-slate-50 font-heading text-slate-900"><div ref={appRootRef} className="mx-auto flex w-full max-w-2xl flex-1 flex-col bg-white shadow-sm"><main className="flex-1 pt-[env(safe-area-inset-top)]">{tab === 'schedule' ? <Schedule events={visible} dateOptions={dateOptions} dateFilter={dateFilter} onDateChange={setDateFilter} query={query} onQueryChange={setQuery} category={category} onCategoryChange={setCategory} categories={categories} isFavorite={isFavorite} onToggleFavorite={toggleFavorite} onOpen={openDetails} onResetFilters={resetFilters} /> : <MyAgenda events={savedEvents} analysis={agendaAnalysis} isFavorite={isFavorite} onToggleFavorite={toggleFavorite} onOpen={openDetails} onBrowse={() => setTab('schedule')} />}</main><BottomNav tab={tab} onChange={setTab} agendaCount={savedEvents.length} /></div><EventDetailSheet event={openEvent} allEvents={allEvents} analysis={agendaAnalysis} isFavorite={openEvent ? isFavorite(openEvent.id) : false} onToggleFavorite={toggleFavorite} onClose={closeDetails} restoreFocusRef={openerRef} appRootRef={appRootRef} showAgendaConflicts={tab === 'agenda'} /></div>
+  return <div className="flex min-h-screen w-full flex-col bg-slate-50 font-heading text-slate-900"><div ref={appRootRef} className="mx-auto flex w-full max-w-2xl flex-1 flex-col bg-white shadow-sm"><main className="flex-1 pt-[env(safe-area-inset-top)]"><PwaStatusBanner offline={offline} updateReady={updateReady} onReload={reloadForUpdate} />{tab === 'schedule' ? <Schedule events={visible} dateOptions={dateOptions} dateFilter={dateFilter} onDateChange={setDateFilter} query={query} onQueryChange={setQuery} category={category} onCategoryChange={setCategory} categories={categories} isFavorite={isFavorite} onToggleFavorite={toggleFavorite} onOpen={openDetails} onResetFilters={resetFilters} /> : <MyAgenda events={savedEvents} analysis={agendaAnalysis} isFavorite={isFavorite} onToggleFavorite={toggleFavorite} onOpen={openDetails} onBrowse={() => setTab('schedule')} />}</main><BottomNav tab={tab} onChange={setTab} agendaCount={savedEvents.length} /></div><EventDetailSheet event={openEvent} allEvents={allEvents} analysis={agendaAnalysis} isFavorite={openEvent ? isFavorite(openEvent.id) : false} onToggleFavorite={toggleFavorite} onClose={closeDetails} restoreFocusRef={openerRef} appRootRef={appRootRef} showAgendaConflicts={tab === 'agenda'} /></div>
 }
