@@ -190,6 +190,31 @@ describe('service worker', () => {
     const entry = readFileSync(resolve(root, 'index.tsx'), 'utf8')
     expect(entry).toMatch(/\.catch\(\(error\) => \{\s*console\.warn/)
   })
+
+  it('does not activate on install while an older worker controls the page', () => {
+    // Mid-session activation would swap the shell under the user. The page
+    // offers "Reload to update" instead, and posts 'skip-waiting' on click.
+    const install = sw.slice(
+      sw.indexOf("self.addEventListener('install'"),
+      sw.indexOf("self.addEventListener('activate'"),
+    )
+    expect(install).not.toContain('skipWaiting()')
+    expect(sw).toContain("data.type === 'skip-waiting'")
+    expect(sw).toContain('self.skipWaiting()')
+  })
+
+  it('tells the page when a navigation was served from the cached shell', () => {
+    // navigator.onLine stays true on captive-portal Wi-Fi, so the offline
+    // banner relies on this message rather than the browser's guess.
+    expect(sw).toContain("'served-offline-shell'")
+  })
+
+  it('surfaces a waiting worker and reloads only after it takes over', () => {
+    const entry = readFileSync(resolve(root, 'index.tsx'), 'utf8')
+    expect(entry).toContain('registration.waiting')
+    expect(entry).toContain('updatefound')
+    expect(entry).toContain('controllerchange')
+  })
 })
 
 describe('header wordmark', () => {

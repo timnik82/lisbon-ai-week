@@ -25,7 +25,11 @@
  * loaded via a 'warm-assets' message so that the first offline launch works
  * too. See index.tsx.
  *
- * Bump VERSION to invalidate every cache on the next deploy.
+ * Bump VERSION to invalidate every cache on the next deploy. A VERSION bump
+ * leaves the new worker 'waiting' while the old one still controls open
+ * clients: the page shows "Reload to update" and posts 'skip-waiting' back,
+ * so the shell is never swapped under the user mid-session. A first install
+ * (no existing worker) still activates immediately.
  */
 const VERSION = 'aiw-v1'
 const SHELL_CACHE = VERSION + '-shell'
@@ -61,8 +65,7 @@ self.addEventListener('install', (event) => {
           cache.addAll(CORE_PRECACHE),
           ...OPTIONAL_PRECACHE.map((url) => cache.add(url).catch(() => undefined)),
         ]),
-      )
-      .then(() => self.skipWaiting()),
+      ),
   )
 })
 
@@ -84,6 +87,14 @@ self.addEventListener('activate', (event) => {
  */
 self.addEventListener('message', (event) => {
   const data = event.data
+
+  // The page chose "Reload to update": leave the waiting state so this worker
+  // activates and claims its clients.
+  if (data && data.type === 'skip-waiting') {
+    event.waitUntil(self.skipWaiting())
+    return
+  }
+
   if (!data || data.type !== 'warm-assets' || !Array.isArray(data.urls)) return
 
   event.waitUntil(
@@ -136,7 +147,18 @@ self.addEventListener('fetch', (event) => {
           return response
         })
         .catch(() =>
-          caches.match('/').then((cached) => cached || new Response('Offline', { status: 503, statusText: 'Offline' })),
+          caches.match('/').then((cached) => {
+            // Tell the page this load came from the cache: navigator.onLine
+            // still reports true on captive-portal Wi-Fi, so the offline
+            // banner needs this signal rather than the browser's guess.
+            if (cached && event.clientId) {
+              self.clients
+                .get(event.clientId)
+                .then((client) => client && client.postMessage({ type: 'served-offline-shell' }))
+                .catch(() => undefined)
+            }
+            return cached || new Response('Offline', { status: 503, statusText: 'Offline' })
+          }),
         ),
     )
     return

@@ -36,10 +36,11 @@ index.tsx, index.html   entry point and HTML host
 index.css               Tailwind entry + app styles
 components/             Badge, BottomNav, ConflictBanner, DateStrip, EmptyState,
                         EventBadges, EventDetailSheet, EventList, EventRow,
-                        FilterBar, PrototypeNotice
+                        FilterBar, PrototypeNotice, PwaStatusBanner
 pages/Schedule.tsx      schedule tab
 pages/MyAgenda.tsx      saved-events tab
-hooks/useFavorites.ts   localStorage-backed favourites
+hooks/                  useFavorites.ts (localStorage favourites),
+                        usePwaStatus.ts (offline + update-waiting state)
 utils/                  format helpers, conflict detection
 types/event.ts          event/catalog types
 data/catalog.json       source catalog (71 listings)
