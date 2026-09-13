@@ -247,8 +247,8 @@
     "category": "Business",
     "venue": "Online (livestream)",
     "verificationStatus": "unverified",
-    "checkedAt": null,
-    "uncertainty": "Local extract only; not rechecked against the official page.",
+    "checkedAt": "2026-09-13T08:14:00Z",
+    "uncertainty": "Official page checked 13 Sep 2026: the published event-details text ends mid-word, so the description above is incomplete. The missing text was not invented.",
     "aliases": null
   },
   {
@@ -301,8 +301,8 @@
     "category": "Business",
     "venue": "Feedzai - Lisbon Office",
     "verificationStatus": "unverified",
-    "checkedAt": null,
-    "uncertainty": "Local extract only; not rechecked against the official page.",
+    "checkedAt": "2026-09-13T08:14:00Z",
+    "uncertainty": "Official page checked 13 Sep 2026: the published event-details text ends mid-word, so the description above is incomplete. The missing text was not invented.",
     "aliases": null
   },
   {
@@ -319,8 +319,8 @@
     "category": "Tech",
     "venue": null,
     "verificationStatus": "unverified",
-    "checkedAt": null,
-    "uncertainty": "Local extract only; not rechecked against the official page.",
+    "checkedAt": "2026-09-13T08:14:00Z",
+    "uncertainty": "Official page checked 13 Sep 2026: the published event-details text ends mid-word, so the description above is incomplete. The missing text was not invented.",
     "aliases": null
   },
   {
@@ -427,8 +427,8 @@
     "category": "Tech",
     "venue": "TBD and Online",
     "verificationStatus": "unverified",
-    "checkedAt": null,
-    "uncertainty": "Local extract only; not rechecked against the official page.",
+    "checkedAt": "2026-09-13T08:14:00Z",
+    "uncertainty": "Official page checked 13 Sep 2026: the published event-details text ends mid-word, so the description above is incomplete. The missing text was not invented.",
     "aliases": null
   },
   {
@@ -516,15 +516,15 @@
     "sourceUrl": "https://lisbonaiweek.com/events-2026/cascais-ai-afterwork",
     "registrationUrl": null,
     "timezone": "Europe/Lisbon",
-    "date": "2026-09-24",
+    "date": null,
     "start": "19:00",
     "end": null,
     "endDate": null,
     "category": "Business",
     "venue": null,
-    "verificationStatus": "verified",
-    "checkedAt": "2026-09-12T20:35:01Z",
-    "uncertainty": "Prior official-page check showed Sep 24, 19:00; extract73 summary says 18:00. Structured venue was not shown.",
+    "verificationStatus": "verified_with_conflict",
+    "checkedAt": "2026-09-13T08:14:00Z",
+    "uncertainty": "Official page checked 13 Sep 2026: the page header shows Sep 24, 19:00, but the page body repeatedly says Friday / Friday evening. The official page contradicts itself, so the exact date is left unconfirmed (date set to null); the 19:00 start is kept from the official header. Structured venue/end were not shown.",
     "aliases": null
   },
   {
@@ -1183,8 +1183,8 @@
     "category": "Business",
     "venue": null,
     "verificationStatus": "unverified",
-    "checkedAt": null,
-    "uncertainty": "Local extract only; not rechecked against the official page. Expanded local extract contains Russian translated/scraper prose; omitted because original-language description was not available.",
+    "checkedAt": "2026-09-13T08:14:00Z",
+    "uncertainty": "Official page checked 13 Sep 2026: the official page publishes the raw URL as its title, and no date or time is published. Title kept as published (not renamed or quarantined). The expanded local extract contains Russian translated/scraper prose; still omitted because original-language description was not available.",
     "aliases": null
   },
   {
