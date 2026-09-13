@@ -10,8 +10,7 @@ import { events as allEvents } from './data/events'
 import { useFavorites } from './hooks/useFavorites'
 import { analyzeConflicts } from './utils/conflicts'
 import { formatShortDate, formatWeekday, normalizeText } from './utils/format'
-
-const WEEK_DATES = ['2026-09-21','2026-09-22','2026-09-23','2026-09-24','2026-09-25','2026-09-26','2026-09-27']
+import { WEEK_DATES, pickInitialDateFilter, todayInTimezone } from './utils/initialDate'
 
 function includesDay(date: string | null, endDate: string | null, selectedDay: string) {
   return Boolean(date && date <= selectedDay && selectedDay <= (endDate ?? date))
@@ -19,7 +18,7 @@ function includesDay(date: string | null, endDate: string | null, selectedDay: s
 
 export function App() {
   const [tab, setTab] = useState<Tab>('schedule')
-  const [dateFilter, setDateFilter] = useState<string>('2026-09-24')
+  const [dateFilter, setDateFilter] = useState<string>(() => pickInitialDateFilter(todayInTimezone()))
   const [query, setQuery] = useState('')
   const [category, setCategory] = useState<CategoryFilter>('all')
   const [openId, setOpenId] = useState<string | null>(null)
