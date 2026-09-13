@@ -103,13 +103,48 @@ describe('index.html', () => {
 describe('service worker', () => {
   const sw = readFileSync(pub('sw.js'), 'utf8')
 
+  const listEntries = (name: string) => {
+    const at = sw.indexOf(`const ${name}`)
+    expect(at, `${name} not found in sw.js`).toBeGreaterThan(-1)
+    const block = sw.slice(at, sw.indexOf(']', at))
+    return [...block.matchAll(/'(\/[^']*)'/g)].map((m) => m[1])
+  }
+
   it('precaches only files that exist', () => {
-    const block = sw.slice(sw.indexOf('const PRECACHE'), sw.indexOf(']', sw.indexOf('const PRECACHE')))
-    const entries = [...block.matchAll(/'(\/[^']*)'/g)].map((m) => m[1])
-    expect(entries).toContain('/')
-    for (const entry of entries.filter((e) => e !== '/')) {
+    const core = listEntries('CORE_PRECACHE')
+    const optional = listEntries('OPTIONAL_PRECACHE')
+    expect(core).toContain('/')
+    expect(core.length + optional.length).toBeGreaterThan(1)
+    for (const entry of [...core, ...optional].filter((e) => e !== '/')) {
       expect(existsSync(pub(entry.replace(/^\//, ''))), `${entry} is precached but missing`).toBe(true)
     }
+  })
+
+  it('only the core shell can fail the install; icons are best-effort', () => {
+    // addAll is all-or-nothing, so a single renamed icon would otherwise reject
+    // the install and silently disable offline support entirely.
+    expect(sw).toContain('cache.addAll(CORE_PRECACHE)')
+    expect(sw).toMatch(/OPTIONAL_PRECACHE\.map\(\(url\) => cache\.add\(url\)\.catch/)
+  })
+
+  it('caches the entry bundles the first visit loaded, so the first offline launch works', () => {
+    // Registration happens on load, after the browser has already fetched the
+    // hashed bundles without the worker controlling the page.
+    expect(sw).toContain("data.type !== 'warm-assets'")
+    expect(sw).toContain("url.pathname.startsWith('/assets/')")
+    const entry = readFileSync(resolve(root, 'index.tsx'), 'utf8')
+    expect(entry).toContain('warm-assets')
+    expect(entry).toContain('getEntriesByType("resource")')
+  })
+
+  it('rejects warm-up URLs that are not same-origin build assets', () => {
+    const handler = sw.slice(sw.indexOf("data.type !== 'warm-assets'"))
+    expect(handler).toContain('url.origin !== self.location.origin')
+  })
+
+  it('passes through same-origin requests that are not on the static allowlist', () => {
+    // Otherwise a future API route would be served stale from a pinned cache.
+    expect(sw).toContain('if (!STATIC_PATHS.includes(url.pathname)) return')
   })
 
   it('serves navigations network-first so a stale shell cannot strand the user', () => {
@@ -129,16 +164,31 @@ describe('service worker', () => {
     // Calling waitUntil from inside the fetch's own .then() throws
     // InvalidStateError once a cached response has been returned, which
     // silently disables the refresh. It must be registered synchronously.
-    const branch = sw.slice(sw.indexOf('// Icons, manifest, favicon'))
+    const anchor = sw.indexOf('// Static files: serve cached')
+    expect(anchor, 'static-file branch not found').toBeGreaterThan(-1)
+    const branch = sw.slice(anchor)
     const waitAt = branch.indexOf('event.waitUntil(fromNetwork)')
+    const returnAt = branch.indexOf('return cached || fromNetwork')
     expect(waitAt, 'background refresh is not registered synchronously').toBeGreaterThan(-1)
-    expect(waitAt).toBeLessThan(branch.indexOf('return cached || fromNetwork'))
+    expect(returnAt, 'cached-first return not found').toBeGreaterThan(-1)
+    expect(waitAt).toBeLessThan(returnAt)
   })
 
   it('is registered only in production builds', () => {
     const entry = readFileSync(resolve(root, 'index.tsx'), 'utf8')
-    expect(entry).toContain('import.meta.env.PROD')
-    expect(entry).toContain("navigator.serviceWorker.register(\"/sw.js\")")
+    // Whitespace-tolerant so reformatting cannot break the assertion.
+    const call = /navigator\.serviceWorker\s*\.register\(\s*["']\/sw\.js["']\s*\)/.exec(entry)
+    expect(call, 'service worker registration call not found').not.toBeNull()
+    const registerAt = call!.index
+    // The guard must precede the call. Asserting both strings exist somewhere
+    // in the file would still pass if registration moved outside the guard.
+    expect(entry.slice(0, registerAt)).toContain('import.meta.env.PROD')
+  })
+
+  it('logs a failed registration instead of swallowing it', () => {
+    // A rejected install would otherwise disable offline support with no signal.
+    const entry = readFileSync(resolve(root, 'index.tsx'), 'utf8')
+    expect(entry).toMatch(/\.catch\(\(error\) => \{\s*console\.warn/)
   })
 })
 
