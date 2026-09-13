@@ -12,12 +12,10 @@ export function PwaStatusBanner({ offline, updateReady, onReload }: PwaStatusBan
   return (
     <div className="space-y-2 px-5 pt-3">
       {updateReady && (
-        <div
-          role="status"
-          className="flex items-center gap-2.5 rounded-xl border border-blue-200 bg-blue-50 px-3.5 py-3"
-        >
+        <div className="flex items-center gap-2.5 rounded-xl border border-blue-200 bg-blue-50 px-3.5 py-3">
           <RefreshCw className="h-4 w-4 shrink-0 text-blue-700" aria-hidden="true" />
-          <div className="min-w-0 flex-1">
+          {/* role="status" stays on the text: a live region must not contain interactive controls. */}
+          <div role="status" className="min-w-0 flex-1">
             <p className="text-[14px] font-semibold text-blue-900">A new version is ready</p>
             <p className="text-[13px] leading-snug text-blue-800">
               {offline
