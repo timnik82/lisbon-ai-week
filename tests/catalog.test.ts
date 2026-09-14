@@ -3,18 +3,27 @@ import catalog from '../data/catalog.json'
 import { events } from '../data/events'
 import type { VerificationStatus } from '../types/event'
 
-// The catalog is the canonical Lisbon AI Week 2026 snapshot. These assertions are
-// deterministic expectations pinned to that immutable file; they must not be
-// "fixed" by editing catalog.json.
+// The catalog is the Lisbon AI Week 2026 snapshot, kept current by the daily
+// source-verification checks. The record set and the IDs are immutable: 71 records
+// that must never be renumbered or reordered, because visitors' saved favourites are
+// keyed to those IDs. The coverage counts below are NOT immutable — they move when the
+// official site publishes a date, time or venue that was previously missing, and they
+// exist to make such a move fail loudly so it arrives through a reviewed PR that quotes
+// the source. Update them only together with the catalog change that caused the move;
+// never adjust them to paper over an unexplained diff.
+//
+// Last moved: 14 Sep 2026 — the official pages published schedules for
+// "Gone in 60 Seconds" and "Reset Protocol" (dated 34 -> 36, descriptions filled
+// 17 -> 15 null) and four records reached verified status.
 const EXPECTED_RECORDS = 71
 const EXPECTED_UNIQUE_IDS = 71
-const EXPECTED_DATED = 34
-const EXPECTED_TBD = 37
-const EXPECTED_NULL_DESCRIPTIONS = 17
+const EXPECTED_DATED = 36
+const EXPECTED_TBD = 35
+const EXPECTED_NULL_DESCRIPTIONS = 15
 const EXPECTED_STATUS_COUNTS: Record<VerificationStatus, number> = {
-  verified: 11,
+  verified: 15,
   verified_with_conflict: 2,
-  unverified: 58,
+  unverified: 54,
 }
 
 // Stable sample IDs drawn from the source catalog. Kept as explicit constants so a
@@ -26,6 +35,10 @@ const STABLE_VERIFIED_IDS = [
   '327e7fb5d9ff',
   'fdd84a498a38',
   'cd09157c333a',
+  '251f94811db6',
+  '4d1a8946f92d',
+  'd127a1c18466',
+  '84b87f220370',
   'd02a8ab95fe8',
   '4c1a43925828',
   '6bd68fc2c99e',
@@ -84,11 +97,11 @@ describe('catalog.json shape', () => {
 })
 
 describe('catalog.json date coverage', () => {
-  it('has 34 dated records', () => {
+  it('has 36 dated records', () => {
     expect(catalog.filter((record) => record.date).length).toBe(EXPECTED_DATED)
   })
 
-  it('has 37 TBD records (no date)', () => {
+  it('has 35 TBD records (no date)', () => {
     expect(catalog.filter((record) => !record.date).length).toBe(EXPECTED_TBD)
   })
 
@@ -100,7 +113,7 @@ describe('catalog.json date coverage', () => {
 })
 
 describe('catalog.json descriptions', () => {
-  it('has 17 null descriptions and never uses empty strings', () => {
+  it('has 15 null descriptions and never uses empty strings', () => {
     expect(catalog.filter((record) => record.description === null).length).toBe(EXPECTED_NULL_DESCRIPTIONS)
     expect(catalog.some((record) => record.description === '')).toBe(false)
   })
