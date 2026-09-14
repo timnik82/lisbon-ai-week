@@ -8,13 +8,13 @@ import type { VerificationStatus } from '../types/event'
 // "fixed" by editing catalog.json.
 const EXPECTED_RECORDS = 71
 const EXPECTED_UNIQUE_IDS = 71
-const EXPECTED_DATED = 34
-const EXPECTED_TBD = 37
-const EXPECTED_NULL_DESCRIPTIONS = 17
+const EXPECTED_DATED = 36
+const EXPECTED_TBD = 35
+const EXPECTED_NULL_DESCRIPTIONS = 15
 const EXPECTED_STATUS_COUNTS: Record<VerificationStatus, number> = {
-  verified: 11,
+  verified: 15,
   verified_with_conflict: 2,
-  unverified: 58,
+  unverified: 54,
 }
 
 // Stable sample IDs drawn from the source catalog. Kept as explicit constants so a
@@ -84,11 +84,11 @@ describe('catalog.json shape', () => {
 })
 
 describe('catalog.json date coverage', () => {
-  it('has 34 dated records', () => {
+  it('has 36 dated records', () => {
     expect(catalog.filter((record) => record.date).length).toBe(EXPECTED_DATED)
   })
 
-  it('has 37 TBD records (no date)', () => {
+  it('has 35 TBD records (no date)', () => {
     expect(catalog.filter((record) => !record.date).length).toBe(EXPECTED_TBD)
   })
 
@@ -100,7 +100,7 @@ describe('catalog.json date coverage', () => {
 })
 
 describe('catalog.json descriptions', () => {
-  it('has 17 null descriptions and never uses empty strings', () => {
+  it('has 15 null descriptions and never uses empty strings', () => {
     expect(catalog.filter((record) => record.description === null).length).toBe(EXPECTED_NULL_DESCRIPTIONS)
     expect(catalog.some((record) => record.description === '')).toBe(false)
   })
