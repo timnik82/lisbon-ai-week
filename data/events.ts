@@ -3,7 +3,7 @@ import catalog from './catalog.json'
 
 // data/catalog.json is the canonical Lisbon AI Week 2026 catalog's public `events`
 // array, imported verbatim: all 71 records with their original IDs and every field
-// value preserved (17 of them carry a null `description` in the source). The build
+// value preserved (15 of them carry a null `description` in the source). The build
 // catalog's per-event `sourceProvenance` is intentionally omitted — it holds local
 // workspace extract paths used while assembling the snapshot, is never shown in the
 // public UI, and is not part of the ScheduleEvent shape.
