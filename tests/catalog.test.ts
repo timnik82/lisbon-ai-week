@@ -26,6 +26,84 @@ const EXPECTED_STATUS_COUNTS: Record<VerificationStatus, number> = {
   unverified: 54,
 }
 
+// The complete, frozen ID set in source order. This is what actually enforces the
+// immutability claimed above: adding, removing, renumbering or reordering a record
+// fails here, so favourites saved in visitors' browsers cannot be silently broken.
+// Adding a genuinely new event to the catalog means adding its ID here deliberately.
+const EXPECTED_IDS = [
+  'ea6439ca3f88',
+  'f9bf1a80043a',
+  '8c2c87cefe31',
+  '43c591098d9a',
+  '6da6b408daf6',
+  '997b6d1b143d',
+  '63c08ca7fe1e',
+  'd45a57ed589c',
+  '6b7cddf6594f',
+  '4f8b8fc0e6c2',
+  'd88fa2764526',
+  '5c271c60af12',
+  'c23d34b6a7d3',
+  'fcaf5088d838',
+  '9ff57efb7640',
+  '327e7fb5d9ff',
+  '251f94811db6',
+  '4d1a8946f92d',
+  '2d1ca0470b20',
+  'a5ea1807b5ae',
+  '61c5a9a1cc5a',
+  '2981c37d8040',
+  '6705f1f6effa',
+  'b2a60634dae9',
+  'fdd84a498a38',
+  'cd09157c333a',
+  'd02a8ab95fe8',
+  '6a70aa41e7b8',
+  'ad7204602d0a',
+  'e9e9ef563d8c',
+  '340c04d386a2',
+  '80698afdeec9',
+  '1a41871d5da0',
+  '4c1a43925828',
+  '4c2311d506f3',
+  'c1d09b2315e6',
+  '6bd68fc2c99e',
+  '51751a27a175',
+  'abdd9e021b61',
+  '278ba8fb8409',
+  'd20896e8b3fd',
+  '73c1eb36d963',
+  '62ebd212633b',
+  'f3b302e2c355',
+  'ba8b0561b60f',
+  '8a34e41e8946',
+  'c3313ffa3df3',
+  'bbad3d924db9',
+  '830c12191b12',
+  '0b232a352ac2',
+  '5bc579cdc135',
+  '34a3b967f96c',
+  '28f3fe3bbc4f',
+  '5cf2b53c7a27',
+  '2c4330033ec8',
+  '95588e363ec2',
+  '09a359ea4092',
+  '8b342398eefc',
+  'd127a1c18466',
+  '84b87f220370',
+  'e8e6ba1e304c',
+  'b73115423803',
+  '1d5b8283058a',
+  'ee6018a0c6b2',
+  'eb6bb6a6b5d4',
+  '1bb0d8a0e0c2',
+  '373cd496d496',
+  '7fde263edb6c',
+  '2ad2d0792769',
+  '31b62c1a978a',
+  'ce206cfa8fcd',
+] as const
+
 // Stable sample IDs drawn from the source catalog. Kept as explicit constants so a
 // regression that rewrites/regenerates IDs fails loudly instead of silently passing.
 const STABLE_VERIFIED_IDS = [
@@ -59,6 +137,10 @@ describe('catalog.json shape', () => {
     const ids = catalog.map((record) => record.id)
     expect(ids.length).toBe(EXPECTED_UNIQUE_IDS)
     expect(new Set(ids).size).toBe(EXPECTED_UNIQUE_IDS)
+  })
+
+  it('matches the frozen ID set exactly, in source order', () => {
+    expect(catalog.map((record) => record.id)).toEqual([...EXPECTED_IDS])
   })
 
   it('has no blank or duplicate IDs', () => {
