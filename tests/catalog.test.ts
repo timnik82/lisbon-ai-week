@@ -4,17 +4,19 @@ import { events } from '../data/events'
 import type { VerificationStatus } from '../types/event'
 
 // The catalog is the canonical Lisbon AI Week 2026 snapshot. These assertions are
-// deterministic expectations pinned to that immutable file; they must not be
-// "fixed" by editing catalog.json.
+// deterministic expectations pinned to that file; they must not be "fixed" by
+// editing catalog.json to make a test pass. They are moved ONLY when a daily
+// source check confirms the official pages themselves changed — last moved on
+// 15 Sep 2026 (10 records re-verified against lisbonaiweek.com).
 const EXPECTED_RECORDS = 71
 const EXPECTED_UNIQUE_IDS = 71
-const EXPECTED_DATED = 34
-const EXPECTED_TBD = 37
-const EXPECTED_NULL_DESCRIPTIONS = 17
+const EXPECTED_DATED = 37
+const EXPECTED_TBD = 34
+const EXPECTED_NULL_DESCRIPTIONS = 15
 const EXPECTED_STATUS_COUNTS: Record<VerificationStatus, number> = {
-  verified: 11,
-  verified_with_conflict: 2,
-  unverified: 58,
+  verified: 19,
+  verified_with_conflict: 1,
+  unverified: 51,
 }
 
 // Stable sample IDs drawn from the source catalog. Kept as explicit constants so a
@@ -31,8 +33,19 @@ const STABLE_VERIFIED_IDS = [
   '6bd68fc2c99e',
   'abdd9e021b61',
   'eb6bb6a6b5d4',
+  // Re-verified against the official pages on 15 Sep 2026.
+  '251f94811db6',
+  'd127a1c18466',
+  '84b87f220370',
+  '4d1a8946f92d',
+  '340c04d386a2',
+  '4c2311d506f3',
+  'fcaf5088d838',
+  // Was verified_with_conflict until the official page resolved its own
+  // header/body contradiction on 15 Sep 2026 (Thu 24 Sep, 6:00pm).
+  '8c2c87cefe31',
 ] as const
-const STABLE_CONFLICT_IDS = ['8c2c87cefe31', 'ad7204602d0a'] as const
+const STABLE_CONFLICT_IDS = ['ad7204602d0a'] as const
 const STABLE_ALIAS_ID = 'fdd84a498a38'
 const STABLE_FIRST_IDS = ['ea6439ca3f88', 'f9bf1a80043a', '8c2c87cefe31'] as const
 
