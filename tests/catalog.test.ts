@@ -4,17 +4,19 @@ import { events } from '../data/events'
 import type { VerificationStatus } from '../types/event'
 
 // The catalog is the canonical Lisbon AI Week 2026 snapshot. These assertions are
-// deterministic expectations pinned to that immutable file; they must not be
-// "fixed" by editing catalog.json.
+// deterministic expectations pinned to that file; they must not be "fixed" by
+// editing catalog.json to make a test pass. They are moved ONLY when a daily
+// source check confirms the official pages themselves changed — last moved on
+// 16 Sep 2026 (Reset Protocol re-verified at its new official URL).
 const EXPECTED_RECORDS = 71
 const EXPECTED_UNIQUE_IDS = 71
-const EXPECTED_DATED = 34
-const EXPECTED_TBD = 37
-const EXPECTED_NULL_DESCRIPTIONS = 17
+const EXPECTED_DATED = 35
+const EXPECTED_TBD = 36
+const EXPECTED_NULL_DESCRIPTIONS = 16
 const EXPECTED_STATUS_COUNTS: Record<VerificationStatus, number> = {
-  verified: 11,
+  verified: 12,
   verified_with_conflict: 2,
-  unverified: 58,
+  unverified: 57,
 }
 
 // Stable sample IDs drawn from the source catalog. Kept as explicit constants so a
@@ -31,6 +33,9 @@ const STABLE_VERIFIED_IDS = [
   '6bd68fc2c99e',
   'abdd9e021b61',
   'eb6bb6a6b5d4',
+  // Re-verified against the official page on 16 Sep 2026, after the event's
+  // URL and title changed at source.
+  '84b87f220370',
 ] as const
 const STABLE_CONFLICT_IDS = ['8c2c87cefe31', 'ad7204602d0a'] as const
 const STABLE_ALIAS_ID = 'fdd84a498a38'
