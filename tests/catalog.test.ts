@@ -8,13 +8,13 @@ import type { VerificationStatus } from '../types/event'
 // "fixed" by editing catalog.json.
 const EXPECTED_RECORDS = 71
 const EXPECTED_UNIQUE_IDS = 71
-const EXPECTED_DATED = 34
-const EXPECTED_TBD = 37
+const EXPECTED_DATED = 38
+const EXPECTED_TBD = 33
 const EXPECTED_NULL_DESCRIPTIONS = 17
 const EXPECTED_STATUS_COUNTS: Record<VerificationStatus, number> = {
-  verified: 11,
-  verified_with_conflict: 2,
-  unverified: 58,
+  verified: 36,
+  verified_with_conflict: 1,
+  unverified: 34,
 }
 
 // Stable sample IDs drawn from the source catalog. Kept as explicit constants so a
@@ -31,8 +31,13 @@ const STABLE_VERIFIED_IDS = [
   '6bd68fc2c99e',
   'abdd9e021b61',
   'eb6bb6a6b5d4',
+  '8c2c87cefe31',
 ] as const
-const STABLE_CONFLICT_IDS = ['8c2c87cefe31', 'ad7204602d0a'] as const
+// 8c2c87cefe31 (Hire Your AI Team in Minutes) left this list on 17 Sep 2026: the
+// official page's header/body date contradiction was resolved at source, so the
+// record is now plainly `verified`. ad7204602d0a (Cascais AI Afterwork) still
+// contradicts itself (header Sep 24 vs body "Friday evening") and stays here.
+const STABLE_CONFLICT_IDS = ['ad7204602d0a'] as const
 const STABLE_ALIAS_ID = 'fdd84a498a38'
 const STABLE_FIRST_IDS = ['ea6439ca3f88', 'f9bf1a80043a', '8c2c87cefe31'] as const
 
@@ -84,7 +89,7 @@ describe('catalog.json shape', () => {
 })
 
 describe('catalog.json date coverage', () => {
-  it('has 34 dated records', () => {
+  it('has 38 dated records', () => {
     expect(catalog.filter((record) => record.date).length).toBe(EXPECTED_DATED)
   })
 
