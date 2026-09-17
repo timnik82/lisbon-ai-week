@@ -31,6 +31,7 @@ const STABLE_VERIFIED_IDS = [
   '6bd68fc2c99e',
   'abdd9e021b61',
   'eb6bb6a6b5d4',
+  '8c2c87cefe31',
 ] as const
 // 8c2c87cefe31 (Hire Your AI Team in Minutes) left this list on 17 Sep 2026: the
 // official page's header/body date contradiction was resolved at source, so the
